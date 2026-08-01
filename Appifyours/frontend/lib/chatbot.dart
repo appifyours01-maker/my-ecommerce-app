@@ -1,6 +1,3 @@
-
-
-
 import 'package:flutter/material.dart';
 
 import 'services/api_service.dart';
@@ -81,8 +78,8 @@ class _ChatBotPageState extends State<ChatBotPage> {
 
       // Fetch product data from backend using same API as main.dart
       final adminId = await AdminManager.getCurrentAdminId();
-      print('🔍 Chatbot using admin ID: $adminId');
-      print('🌐 API URL: ${ApiConfig.baseUrl}/api/get-form?adminId=$adminId&appId=${ApiConfig.appId}');
+      print('🔍 Chatbot using admin ID: ${adminId}');
+      print('🌐 API URL: ${ApiConfig.baseUrl}/api/get-form?adminId=${adminId}&appId=${ApiConfig.appId}');
 
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/api/get-form?adminId=$adminId&appId=${ApiConfig.appId}'),
