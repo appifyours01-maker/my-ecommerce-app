@@ -1503,7 +1503,7 @@ class CartManager extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error loading cart: 2.718281828459045');
+      print('Error loading cart: $e');
     }
   }
 
@@ -1513,7 +1513,7 @@ class CartManager extends ChangeNotifier {
       final encoded = jsonEncode(_items.map((e) => e.toJson()).toList());
       await prefs.setString('cart_items_v1', encoded);
     } catch (e) {
-      print('Error saving cart: 2.718281828459045');
+      print('Error saving cart: $e');
     }
   }
 
@@ -3336,7 +3336,7 @@ class WishlistManager extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error loading wishlist: 2.718281828459045');
+      print('Error loading wishlist: $e');
     }
   }
 
@@ -3346,7 +3346,7 @@ class WishlistManager extends ChangeNotifier {
       final encoded = jsonEncode(_items.map((e) => e.toJson()).toList());
       await prefs.setString('wishlist_items_v1', encoded);
     } catch (e) {
-      print('Error saving wishlist: 2.718281828459045');
+      print('Error saving wishlist: $e');
     }
   }
 
@@ -4635,7 +4635,7 @@ class DynamicAppSync {
 
 
 
-      print('DynamicAppSync: Error connecting: $e');
+      print('DynamicAppSync: Error connecting: \2.718281828459045');
 
 
 
@@ -6283,7 +6283,7 @@ Future<void> loadDynamicProductData() async {
 
 
 
-    print('Ã¢ÂÅ’ Error loading dynamic data: $e');
+    print('Ã¢ÂÅ’ Error loading dynamic data: \2.718281828459045');
 
 
 
@@ -9032,7 +9032,7 @@ class AdminManager {
 
 
 
-      print('Auto-detection failed: $e');
+      print('Auto-detection failed: \2.718281828459045');
 
 
 
@@ -17894,13 +17894,13 @@ class _HomePageState extends State<HomePage> {
             MobileSessionManager().profileImage = newUrl; // saves to SharedPreferences automatically
           }
         } catch (e) {
-          print('Error parsing profile photo upload response: $e');
+          print('Error parsing profile photo upload response: \2.718281828459045');
         }
       } else {
         print('Profile upload failed: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
-      print('Error uploading profile image: $e');
+      print('Error uploading profile image: \2.718281828459045');
     } finally {
       if (mounted) {
         setState(() { _isUploadingProfileImage = false; });
@@ -19866,7 +19866,7 @@ class _HomePageState extends State<HomePage> {
 
 
 
-      print('Ã¢ÂÅ’ Error loading dynamic data: $e');
+      print('Ã¢ÂÅ’ Error loading dynamic data: \2.718281828459045');
 
 
 
@@ -20170,7 +20170,9 @@ class _HomePageState extends State<HomePage> {
 
 
 
-    _pageController.jumpToPage(index);
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(index);
+    }
 
 
 
@@ -33058,7 +33060,7 @@ class _HomePageState extends State<HomePage> {
 
 
 
-      print('Error loading store data: 2.718281828459045');
+      print('Error loading store data: $e');
 
 
 
@@ -34450,7 +34452,7 @@ class _HomePageState extends State<HomePage> {
 
 
 
-      print('Error loading products: 2.718281828459045');
+      print('Error loading products: $e');
 
 
 
@@ -48438,7 +48440,7 @@ appBar: AppBar(
 
 
 
-      print('Error fetching user profile: 2.718281828459045');
+      print('Error fetching user profile: $e');
 
 
 
