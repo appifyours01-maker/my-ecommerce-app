@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter/material.dart'; // For BuildContext
-// For Uint8List
+import 'dart:typed_data'; // For Uint8List
 import 'dart:io' show File;
 import 'package:http_parser/http_parser.dart'; // For MediaType
 import 'package:flutter_dotenv/flutter_dotenv.dart';
