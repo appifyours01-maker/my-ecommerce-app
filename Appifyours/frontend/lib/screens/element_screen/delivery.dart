@@ -18,7 +18,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
-import 'package:appifyours/services/api_service.dart';
+import 'package:frontend/services/api_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ================================================================
@@ -218,6 +218,10 @@ class ShiprocketService {
     final orderItems = <Map<String, dynamic>>[];
     for (var idx = 0; idx < items.length; idx++) {
       final i = items[idx];
+      if (i == null) {
+        debugPrint('⚠️ SR: Skipping null item at index $idx');
+        continue;
+      }
       final price = (i['price'] is num ? (i['price'] as num).toDouble() : 0.0);
       final qty = (i['quantity'] is num ? (i['quantity'] as num).toInt() : 1);
       final itemName = (i['name']?.toString() ?? 'Product');
@@ -885,7 +889,7 @@ class _DCPState extends State<DeliveryCheckoutPage> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: sel ? Colors.blue : Colors.grey.shade300),
                     boxShadow: sel
-                        ? [BoxShadow(color: Colors.blue.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 2))]
+                        ? [BoxShadow(color: Colors.blue.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2))]
                         : [],
                   ),
                   child: Column(children: [
@@ -1076,7 +1080,7 @@ class _DCPState extends State<DeliveryCheckoutPage> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8, offset: const Offset(0, -2))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 8, offset: const Offset(0, -2))],
         ),
         child: Row(children: [
           if (_step > 0) ...[
@@ -1118,19 +1122,19 @@ class _DCPState extends State<DeliveryCheckoutPage> {
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Expanded(
                     child: Text('${i.name}  ×${i.quantity}', style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)),
-                Text('$_currency${((i.effectivePrice as num) * (i.quantity as num)).toStringAsFixed(2)}',
+                Text('${_currency}${((i.effectivePrice as num) * (i.quantity as num)).toStringAsFixed(2)}',
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
               ]),
             )),
         const Divider(height: 16),
-        _brow('Subtotal', '$_currency${_subtotal.toStringAsFixed(2)}'),
-        if (_discountAmount > 0) _brow('Discount', '-$_currency${_discountAmount.toStringAsFixed(2)}', valueColor: Colors.green),
-        if (_gstAmount > 0) _brow('GST', '$_currency${_gstAmount.toStringAsFixed(2)}'),
-        if (_shipping > 0) _brow('Shipping', '$_currency${_shipping.toStringAsFixed(2)}'),
+        _brow('Subtotal', '${_currency}${_subtotal.toStringAsFixed(2)}'),
+        if (_discountAmount > 0) _brow('Discount', '-${_currency}${_discountAmount.toStringAsFixed(2)}', valueColor: Colors.green),
+        if (_gstAmount > 0) _brow('GST', '${_currency}${_gstAmount.toStringAsFixed(2)}'),
+        if (_shipping > 0) _brow('Shipping', '${_currency}${_shipping.toStringAsFixed(2)}'),
         const Divider(height: 16),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          Text('$_currency${_grand.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blue)),
+          Text('${_currency}${_grand.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blue)),
         ]),
       ]);
 
@@ -1141,7 +1145,7 @@ class _DCPState extends State<DeliveryCheckoutPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
@@ -1186,7 +1190,7 @@ class _DCPState extends State<DeliveryCheckoutPage> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: !enabled ? Colors.grey.shade100 : sel ? color.withValues(alpha: 0.08) : Colors.white,
+          color: !enabled ? Colors.grey.shade100 : sel ? color.withOpacity(0.08) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: !enabled ? Colors.grey.shade300 : sel ? color : Colors.grey.shade300, width: sel ? 2 : 1),
         ),
@@ -1200,7 +1204,7 @@ class _DCPState extends State<DeliveryCheckoutPage> {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(width: 12),
@@ -1340,7 +1344,7 @@ class OrderSuccessPage extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
         ),
         child: child,
       );
@@ -1437,7 +1441,7 @@ class _OTPState extends State<OrderTrackingPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
                     ),
                     child: Row(children: [
                       Container(
@@ -1461,7 +1465,7 @@ class _OTPState extends State<OrderTrackingPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
                     ),
                     child: events.isEmpty
                         ? const Center(child: Padding(padding: EdgeInsets.all(16), child: Text('No events yet', style: TextStyle(color: Colors.grey))))
