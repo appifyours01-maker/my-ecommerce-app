@@ -2,6 +2,7 @@ import 'screens/element_screen/delivery.dart';
 import 'chatbot.dart';
 import 'services/api_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter/widgets.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
 
@@ -99,6 +100,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 
 
 
@@ -115,6 +117,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 import 'package:frontend/utils/auth_helper.dart';
+import 'package:frontend/services/mobile_session.dart';
 
 
 
@@ -402,7 +405,7 @@ class PriceUtils {
 
 
 
-    if (priceString.contains('₹')) return '₹';
+    if (priceString.contains('Ã¢â€šÂ¹')) return 'Ã¢â€šÂ¹';
 
 
 
@@ -434,7 +437,7 @@ class PriceUtils {
 
 
 
-    if (priceString.contains('€')) return '€';
+    if (priceString.contains('Ã¢â€šÂ¬')) return 'Ã¢â€šÂ¬';
 
 
 
@@ -450,7 +453,7 @@ class PriceUtils {
 
 
 
-    if (priceString.contains('£')) return '£';
+    if (priceString.contains('Ã‚Â£')) return 'Ã‚Â£';
 
 
 
@@ -466,7 +469,7 @@ class PriceUtils {
 
 
 
-    if (priceString.contains('¥')) return '¥';
+    if (priceString.contains('Ã‚Â¥')) return 'Ã‚Â¥';
 
 
 
@@ -482,7 +485,7 @@ class PriceUtils {
 
 
 
-    if (priceString.contains('₩')) return '₩';
+    if (priceString.contains('Ã¢â€šÂ©')) return 'Ã¢â€šÂ©';
 
 
 
@@ -498,7 +501,7 @@ class PriceUtils {
 
 
 
-    if (priceString.contains('₽')) return '₽';
+    if (priceString.contains('Ã¢â€šÂ½')) return 'Ã¢â€šÂ½';
 
 
 
@@ -514,7 +517,7 @@ class PriceUtils {
 
 
 
-    if (priceString.contains('₦')) return '₦';
+    if (priceString.contains('Ã¢â€šÂ¦')) return 'Ã¢â€šÂ¦';
 
 
 
@@ -530,7 +533,7 @@ class PriceUtils {
 
 
 
-    if (priceString.contains('₨')) return '₨';
+    if (priceString.contains('Ã¢â€šÂ¨')) return 'Ã¢â€šÂ¨';
 
 
 
@@ -650,7 +653,7 @@ class PriceUtils {
 
 
 
-        return '€';
+        return 'Ã¢â€šÂ¬';
 
 
 
@@ -666,7 +669,7 @@ class PriceUtils {
 
 
 
-        return '£';
+        return 'Ã‚Â£';
 
 
 
@@ -682,7 +685,7 @@ class PriceUtils {
 
 
 
-        return '¥';
+        return 'Ã‚Â¥';
 
 
 
@@ -698,7 +701,7 @@ class PriceUtils {
 
 
 
-        return '₹';
+        return 'Ã¢â€šÂ¹';
 
 
 
@@ -714,7 +717,7 @@ class PriceUtils {
 
 
 
-        return '₩';
+        return 'Ã¢â€šÂ©';
 
 
 
@@ -730,7 +733,7 @@ class PriceUtils {
 
 
 
-        return '₽';
+        return 'Ã¢â€šÂ½';
 
 
 
@@ -746,7 +749,7 @@ class PriceUtils {
 
 
 
-        return '₦';
+        return 'Ã¢â€šÂ¦';
 
 
 
@@ -762,7 +765,7 @@ class PriceUtils {
 
 
 
-        return '₨';
+        return 'Ã¢â€šÂ¨';
 
 
 
@@ -1411,37 +1414,27 @@ class CartItem {
 
 
   double get effectivePrice => discountPrice > 0 ? discountPrice : price;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   double get totalPrice => effectivePrice * quantity;
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'price': price,
+    'discountPrice': discountPrice,
+    'quantity': quantity,
+    'image': image,
+    'currencySymbol': currencySymbol,
+  };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
+    id: json['id'].toString(),
+    name: json['name'].toString(),
+    price: (json['price'] as num).toDouble(),
+    discountPrice: (json['discountPrice'] as num?)?.toDouble() ?? 0.0,
+    quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+    image: json['image'] as String?,
+    currencySymbol: json['currencySymbol']?.toString() ?? '',
+  );
 }
 
 
@@ -1491,22 +1484,39 @@ class CartItem {
 
 
 class CartManager extends ChangeNotifier {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   final List<CartItem> _items = [];
+
+  CartManager() {
+    _loadCart();
+  }
+
+  Future<void> _loadCart() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      final cartKey = userId != null ? 'cart_items_v1_$userId' : 'cart_items_v1';
+      final raw = prefs.getString(cartKey);
+      if (raw != null && raw.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(raw);
+        _items.clear();
+        _items.addAll(decoded.map((e) => CartItem.fromJson(e as Map<String, dynamic>)));
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error loading cart: 2.718281828459045');
+    }
+  }
+
+  Future<void> _saveCart() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(_items.map((e) => e.toJson()).toList());
+      await prefs.setString('cart_items_v1', encoded);
+    } catch (e) {
+      print('Error saving cart: 2.718281828459045');
+    }
+  }
+
 
 
 
@@ -2250,6 +2260,7 @@ class CartManager extends ChangeNotifier {
 
 
 
+    _saveCart();
     notifyListeners();
 
 
@@ -2330,6 +2341,7 @@ class CartManager extends ChangeNotifier {
 
 
 
+    _saveCart();
     notifyListeners();
 
 
@@ -2426,6 +2438,7 @@ class CartManager extends ChangeNotifier {
 
 
 
+    _saveCart();
     notifyListeners();
 
 
@@ -2510,6 +2523,7 @@ class CartManager extends ChangeNotifier {
 
 
 
+    _saveCart();
     notifyListeners();
 
 
@@ -3231,69 +3245,27 @@ class WishlistItem {
 
 
     this.currencySymbol = '\\\$',
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   double get effectivePrice => discountPrice > 0 ? discountPrice : price;
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'price': price,
+    'discountPrice': discountPrice,
+    'image': image,
+    'currencySymbol': currencySymbol,
+  };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  factory WishlistItem.fromJson(Map<String, dynamic> json) => WishlistItem(
+    id: json['id'].toString(),
+    name: json['name'].toString(),
+    price: (json['price'] as num).toDouble(),
+    discountPrice: (json['discountPrice'] as num?)?.toDouble() ?? 0.0,
+    image: json['image'] as String?,
+    currencySymbol: json['currencySymbol']?.toString() ?? '',
+  );
 }
 
 
@@ -3347,22 +3319,37 @@ class WishlistManager extends ChangeNotifier {
     clear(); // Reuse existing clear method
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   final List<WishlistItem> _items = [];
+
+  WishlistManager() {
+    _loadWishlist();
+  }
+
+  Future<void> _loadWishlist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('wishlist_items_v1');
+      if (raw != null && raw.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(raw);
+        _items.clear();
+        _items.addAll(decoded.map((e) => WishlistItem.fromJson(e as Map<String, dynamic>)));
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error loading wishlist: 2.718281828459045');
+    }
+  }
+
+  Future<void> _saveWishlist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(_items.map((e) => e.toJson()).toList());
+      await prefs.setString('wishlist_items_v1', encoded);
+    } catch (e) {
+      print('Error saving wishlist: 2.718281828459045');
+    }
+  }
+
 
 
 
@@ -3474,7 +3461,8 @@ class WishlistManager extends ChangeNotifier {
 
 
 
-      notifyListeners();
+      _saveWishlist();
+    notifyListeners();
 
 
 
@@ -3570,6 +3558,7 @@ class WishlistManager extends ChangeNotifier {
 
 
 
+    _saveWishlist();
     notifyListeners();
 
 
@@ -3654,6 +3643,7 @@ class WishlistManager extends ChangeNotifier {
 
 
 
+    _saveWishlist();
     notifyListeners();
 
 
@@ -5685,7 +5675,7 @@ Future<void> loadDynamicProductData() async {
 
 
 
-    print('🔍 Loading dynamic data with admin ID: ${adminId}');
+    print('Ã°Å¸â€Â Loading dynamic data with admin ID: ${adminId}');
 
 
 
@@ -6165,7 +6155,7 @@ Future<void> loadDynamicProductData() async {
 
 
 
-        print('✅ Loaded ${productCards.length} dynamic products');
+        print('Ã¢Å“â€¦ Loaded ${productCards.length} dynamic products');
 
 
 
@@ -6293,7 +6283,7 @@ Future<void> loadDynamicProductData() async {
 
 
 
-    print('❌ Error loading dynamic data: $e');
+    print('Ã¢ÂÅ’ Error loading dynamic data: $e');
 
 
 
@@ -6629,7 +6619,7 @@ void startRealTimeUpdates() async {
 
 
 
-      print('📱 Received real-time update: $type');
+      print('Ã°Å¸â€œÂ± Received real-time update: $type');
 
 
 
@@ -7846,7 +7836,7 @@ class ApiConfig {
 
 
 
-  static const String adminObjectId = '699ec9b62e762d6e57b28cda'; // Will be replaced during publish
+  static const String adminObjectId = '695fa5ceda950cba5d856267'; // Will be replaced during publish
 
 
 
@@ -7960,19 +7950,7 @@ class SessionManager {
 
   static String? authToken;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  static String? profileImage;
 
   static String appName = 'AppifyYours';
 
@@ -8070,7 +8048,7 @@ class SessionManager {
 
 
 
-    print('🔍 Admin config loaded: $loadedAppName');
+    print('Ã°Å¸â€Â Admin config loaded: $loadedAppName');
 
 
 
@@ -8086,7 +8064,7 @@ class SessionManager {
 
 
 
-    print('🎨 App name set globally: ${SessionManager.appName}');
+    print('Ã°Å¸Å½Â¨ App name set globally: ${SessionManager.appName}');
 
 
 
@@ -8263,6 +8241,8 @@ class SessionManager {
 
 
     authToken = token;
+    
+    SessionManager.profileImage = profileImage;
 
 
 
@@ -8278,7 +8258,7 @@ class SessionManager {
 
 
 
-    print('✅ User logged in: $userId');
+    print('Ã¢Å“â€¦ User logged in: $userId');
 
 
 
@@ -8294,7 +8274,7 @@ class SessionManager {
 
 
 
-    print('🔐 Session bound to userId: $userId');
+    print('Ã°Å¸â€Â Session bound to userId: $userId');
 
 
 
@@ -8359,6 +8339,8 @@ class SessionManager {
 
 
     await prefs.setString('user_id', userId);
+    
+    if (profileImage != null) await prefs.setString('profile_image', profileImage);
 
 
 
@@ -8389,6 +8371,26 @@ class SessionManager {
 
 
 
+
+  static Future<void> logout(BuildContext context) async {
+    currentUserId = null;
+    authToken = null;
+    profileImage = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_id');
+    await prefs.remove('profile_image');
+    
+    // Clear cart on logout
+    await prefs.remove('cart_items_v1');
+    
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const SignInPage()),
+        (route) => false,
+      );
+    }
+  }
 
 }
 
@@ -8598,7 +8600,7 @@ class AdminManager {
 
 
 
-      '❌ CRITICAL: Admin ID override detected',
+      'Ã¢ÂÅ’ CRITICAL: Admin ID override detected',
 
 
 
@@ -8662,7 +8664,7 @@ class AdminManager {
 
 
 
-    print('✅ Admin ID locked: $adminId');
+    print('Ã¢Å“â€¦ Admin ID locked: $adminId');
 
 
 
@@ -8790,7 +8792,7 @@ class AdminManager {
 
 
 
-        Uri.parse('http://192.168.0.12:5000/api/admin/app-info'),
+        Uri.parse('http://192.168.0.14:5000/api/admin/app-info'),
 
 
 
@@ -9542,7 +9544,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
 
 
-      print('🔍 Splash screen using admin ID: ${adminId}');
+      print('Ã°Å¸â€Â Splash screen using admin ID: ${adminId}');
 
 
 
@@ -9782,7 +9784,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
 
 
-          print('✅ Splash screen loaded app name: ${_appName}');
+          print('Ã¢Å“â€¦ Splash screen loaded app name: ${_appName}');
 
 
 
@@ -9830,7 +9832,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
 
 
-        print('⚠️ Splash screen API error: ${response.statusCode}');
+        print('Ã¢Å¡Â Ã¯Â¸Â Splash screen API error: ${response.statusCode}');
 
 
 
@@ -10135,27 +10137,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
 
     if (mounted) {
+      // Ã¢Å“â€¦ Check session EXACTLY like web app does Ã¢â‚¬â€ read SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final userId = prefs.getString('user_id');
+      final bool isLoggedIn = token != null && token.isNotEmpty && userId != null && userId.isNotEmpty;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      // Restore in-memory session so rest of app can read SessionManager.currentUserId
+      if (isLoggedIn) {
+        SessionManager.currentUserId = userId;
+        SessionManager.authToken = token;
+      }
 
       Navigator.pushReplacement(
-
-
-
-
-
 
 
 
@@ -10182,7 +10176,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
 
 
-        MaterialPageRoute(builder: (context) => const SignInPage()),
+        MaterialPageRoute(builder: (context) => isLoggedIn ? const HomePage() : const SignInPage()),
 
 
 
@@ -11590,7 +11584,7 @@ class _SignInPageState extends State<SignInPage> {
 
 
 
-        Uri.parse('http://192.168.0.12:5000/api/login'),
+        Uri.parse('http://192.168.0.14:5000/api/login'),
 
 
 
@@ -17847,6 +17841,73 @@ class HomePage extends StatefulWidget {
 
 
 class _HomePageState extends State<HomePage> {
+  bool _isUploadingProfileImage = false;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _showImageOptions() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (image == null) return;
+    await _uploadProfileImage(image);
+  }
+
+  Future<void> _uploadProfileImage(XFile image) async {
+    setState(() {
+      _isUploadingProfileImage = true;
+    });
+    try {
+      final session = MobileSessionManager();
+      final userId = session.userId;
+      final token = session.authToken;
+
+      if (userId == null || userId.isEmpty) {
+        setState(() { _isUploadingProfileImage = false; });
+        return;
+      }
+
+      final bytes = await image.readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/users/$userId/profile-image'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'imageBase64': base64Image,
+          'fileName': image.name,
+          'mimeType': 'image/jpeg',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        try {
+          final Map<String, dynamic> responseJson = jsonDecode(response.body);
+          if (responseJson['success'] == true && responseJson['profileImage'] != null) {
+            final String newUrl = responseJson['profileImage'].toString();
+            MobileSessionManager().profileImage = newUrl; // saves to SharedPreferences automatically
+          }
+        } catch (e) {
+          print('Error parsing profile photo upload response: $e');
+        }
+      } else {
+        print('Profile upload failed: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      print('Error uploading profile image: $e');
+    } finally {
+      if (mounted) {
+        setState(() { _isUploadingProfileImage = false; });
+      }
+    }
+  }
+
 
 
 
@@ -18749,7 +18810,7 @@ class _HomePageState extends State<HomePage> {
 
 
 
-      print('🔍 Home page using admin ID: ${adminId}');
+      print('Ã°Å¸â€Â Home page using admin ID: ${adminId}');
 
 
 
@@ -19741,7 +19802,7 @@ class _HomePageState extends State<HomePage> {
 
 
 
-          print('✅ Loaded ${_dynamicProductCards.length} products from backend');
+          print('Ã¢Å“â€¦ Loaded ${_dynamicProductCards.length} products from backend');
 
 
 
@@ -19805,7 +19866,7 @@ class _HomePageState extends State<HomePage> {
 
 
 
-      print('❌ Error loading dynamic data: $e');
+      print('Ã¢ÂÅ’ Error loading dynamic data: $e');
 
 
 
@@ -46546,7 +46607,7 @@ appBar: AppBar(
 
 
 
-                  Container(
+            Center(
 
 
 
@@ -46562,7 +46623,7 @@ appBar: AppBar(
 
 
 
-                    padding: const EdgeInsets.all(16.0),
+              child: Column(
 
 
 
@@ -46578,7 +46639,47 @@ appBar: AppBar(
 
 
 
-                    decoration: BoxDecoration(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ListenableBuilder(
+                    listenable: MobileSessionManager(),
+                    builder: (context, _) {
+                      final profileImg = MobileSessionManager().profileImage;
+                      return GestureDetector(
+                        onTap: _showImageOptions,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 60,
+                              backgroundColor: Colors.grey,
+                              backgroundImage: profileImg != null && profileImg.isNotEmpty
+                                  ? NetworkImage(profileImg)
+                                  : null,
+                              child: _isUploadingProfileImage
+                                  ? const CircularProgressIndicator(color: Colors.white)
+                                  : (profileImg == null || profileImg.isEmpty)
+                                      ? const Icon(Icons.person, size: 60, color: Colors.white)
+                                      : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
 
 
 
@@ -46594,7 +46695,7 @@ appBar: AppBar(
 
 
 
-                      color: Colors.white,
+                  FutureBuilder<Map<String, dynamic>>(
 
 
 
@@ -46610,7 +46711,631 @@ appBar: AppBar(
 
 
 
-                      borderRadius: BorderRadius.circular(12),
+                    future: _fetchUserProfile(),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    builder: (context, snapshot) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        return const CircularProgressIndicator();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      if (snapshot.hasError) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        return const Text(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          'User',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          style: TextStyle(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            fontSize: 26,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            fontWeight: FontWeight.bold,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            color: Colors.black,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          ),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      final userData = snapshot.data ?? {};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      final firstName = userData['firstName'] ?? '';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      final lastName = userData['lastName'] ?? '';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      final displayName = (firstName.isNotEmpty && lastName.isNotEmpty) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          ? '$firstName $lastName'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          : (firstName.isNotEmpty ? firstName : (lastName.isNotEmpty ? lastName : 'User'));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      return Text(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        displayName,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        style: const TextStyle(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          fontSize: 26,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          fontWeight: FontWeight.bold,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          color: Colors.black,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        ),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  ),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  const SizedBox(height: 15),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  OutlinedButton(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    style: OutlinedButton.styleFrom(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      minimumSize: const Size(250, 50),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      side: const BorderSide(color: Colors.red),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      shape: RoundedRectangleBorder(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        borderRadius: BorderRadius.circular(12),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      ),
 
 
 
@@ -46642,7 +47367,7 @@ appBar: AppBar(
 
 
 
-                    child: Column(
+                    onPressed: () {
 
 
 
@@ -46658,7 +47383,7 @@ appBar: AppBar(
 
 
 
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      // Log out and navigate to sign in page
 
 
 
@@ -46674,7 +47399,7 @@ appBar: AppBar(
 
 
 
-                      children: [
+                      Navigator.pushAndRemoveUntil(
 
 
 
@@ -46690,7 +47415,7 @@ appBar: AppBar(
 
 
 
-                        // Profile Header
+                        context,
 
 
 
@@ -46706,7 +47431,7 @@ appBar: AppBar(
 
 
 
-                        Center(
+                        MaterialPageRoute(
 
 
 
@@ -46722,279 +47447,7 @@ appBar: AppBar(
 
 
 
-                          child: Column(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            children: [
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              CircleAvatar(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                radius: 50,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                backgroundColor: const Color(0xFF0277BD),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                child: const Icon(Icons.person, size: 50, color: Colors.white),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              const SizedBox(height: 16),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              Text(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                'User Profile',
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                style: const TextStyle(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                  fontSize: 20,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                  fontWeight: FontWeight.bold,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                  color: Color(0xFF0277BD),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            ],
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                          ),
+                          builder: (context) => const SignInPage(),
 
 
 
@@ -47026,7 +47479,7 @@ appBar: AppBar(
 
 
 
-                        const SizedBox(height: 32),
+                        (route) => false,
 
 
 
@@ -47042,7 +47495,7 @@ appBar: AppBar(
 
 
 
-                        
+                      );
 
 
 
@@ -47058,7 +47511,7 @@ appBar: AppBar(
 
 
 
-                        // Refund Button
+                    },
 
 
 
@@ -47074,7 +47527,7 @@ appBar: AppBar(
 
 
 
-                        SizedBox(
+                    child: const Text(
 
 
 
@@ -47090,7 +47543,7 @@ appBar: AppBar(
 
 
 
-                          width: double.infinity,
+                      'Log Out',
 
 
 
@@ -47106,631 +47559,7 @@ appBar: AppBar(
 
 
 
-                          child: ElevatedButton.icon(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            onPressed: () {},
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            icon: const Icon(Icons.refresh, color: Colors.white),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            label: Text(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              'Request Refund',
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            style: ElevatedButton.styleFrom(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              shape: RoundedRectangleBorder(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                borderRadius: BorderRadius.circular(12),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              backgroundColor: Color(0xFFFF9800),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              elevation: 2,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                          ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        const SizedBox(height: 12),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        // Logout Button
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        SizedBox(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                          width: double.infinity,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                          child: ElevatedButton.icon(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            onPressed: () {},
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            icon: const Icon(Icons.logout, color: Colors.white),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            label: Text(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              'Logout',
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            style: ElevatedButton.styleFrom(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              shape: RoundedRectangleBorder(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                borderRadius: BorderRadius.circular(12),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              backgroundColor: Color(0xFFF44336),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                              elevation: 2,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                          ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                      ],
+                      style: TextStyle(fontSize: 18, color: Colors.red, fontWeight: FontWeight.w600),
 
 
 
@@ -47778,7 +47607,39 @@ appBar: AppBar(
 
 
 
+                ],
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              ),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            ),
 
 
 
